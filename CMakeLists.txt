@@ -16,6 +16,7 @@ project(aws-c-common LANGUAGES C VERSION 0.1.0)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(AwsCFlags)
+include(AwsSharedLibSetup)
 include(AwsFeatureTests)
 include(AwsSanitizers)
 include(AwsSIMD)
@@ -104,6 +105,8 @@ endif()
 
 add_library(${CMAKE_PROJECT_NAME} ${COMMON_SRC})
 aws_set_common_properties(${CMAKE_PROJECT_NAME} NO_WEXTRA)
+aws_prepare_symbol_visibility_args(${CMAKE_PROJECT_NAME} "AWS_COMMON")
+
 #apple source already includes the definitions we want, and setting this posix source
 #version causes it to revert to an older version. So don't turn it on there, we don't need it.
 if (UNIX AND NOT APPLE)
@@ -154,56 +157,29 @@ foreach(HEADER_SRCPATH IN ITEMS ${AWS_COMMON_HEADERS} ${AWS_COMMON_OS_HEADERS} $
 # succeeds; otherwise, if we're installing to /foo/aws-c-common-install, and our source directory is
 # /foo/aws-c-common, we'll end up installing to /foo/aws-c-common-install-install
 
-	unset(HEADER_DSTDIR)
+    unset(HEADER_DSTDIR)
 
-	foreach(POTENTIAL_PREFIX IN ITEMS ${GENERATED_ROOT_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-		string(LENGTH ${POTENTIAL_PREFIX} _prefixlen)
-		string(SUBSTRING ${HEADER_DIR} 0 ${_prefixlen} _actual_prefix)
-		if(${_actual_prefix} STREQUAL ${POTENTIAL_PREFIX})
-			string(REPLACE "${POTENTIAL_PREFIX}/" "" HEADER_DSTDIR "${HEADER_DIR}")
-			break()
-		endif()
-	endforeach()
+    foreach(POTENTIAL_PREFIX IN ITEMS ${GENERATED_ROOT_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+        string(LENGTH ${POTENTIAL_PREFIX} _prefixlen)
+        string(SUBSTRING ${HEADER_DIR} 0 ${_prefixlen} _actual_prefix)
+        if(${_actual_prefix} STREQUAL ${POTENTIAL_PREFIX})
+            string(REPLACE "${POTENTIAL_PREFIX}/" "" HEADER_DSTDIR "${HEADER_DIR}")
+            break()
+        endif()
+    endforeach()
 
-	if(NOT HEADER_DSTDIR)
-		message(ERROR "Couldn't find source root for header ${HEADER_SRCPATH}")
-	endif()
+    if(NOT HEADER_DSTDIR)
+        message(ERROR "Couldn't find source root for header ${HEADER_SRCPATH}")
+    endif()
 
     install(FILES ${HEADER_SRCPATH}
             DESTINATION ${HEADER_DSTDIR}
             COMPONENT Development)
 endforeach()
-
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-# Set the default lib installation path on GNU systems with GNUInstallDirs
-if (BUILD_SHARED_LIBS)
-  install(TARGETS ${CMAKE_PROJECT_NAME}
-      EXPORT ${CMAKE_PROJECT_NAME}-targets
-      ARCHIVE
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        COMPONENT Development
-      LIBRARY
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        NAMELINK_SKIP
-        COMPONENT Runtime
-      RUNTIME
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        COMPONENT Runtime)
-  install(TARGETS ${CMAKE_PROJECT_NAME}
-      EXPORT ${CMAKE_PROJECT_NAME}-targets
-      LIBRARY
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        NAMELINK_ONLY
-      COMPONENT Development)
-else()
-  install(TARGETS ${CMAKE_PROJECT_NAME}
-      EXPORT ${CMAKE_PROJECT_NAME}-targets
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      COMPONENT Development)
-endif()
 
-
+aws_prepare_shared_lib_exports(${CMAKE_PROJECT_NAME})
 
 set(PROJECT_CONFIG_FILE_TEMPLATE "cmake/${CMAKE_PROJECT_NAME}-config.cmake")
 set(GENERATED_PROJECT_CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake")
@@ -226,6 +202,7 @@ install(FILES "${GENERATED_PROJECT_CONFIG_FILE}"
 
 list(APPEND EXPORT_MODULES
     "cmake/AwsCFlags.cmake"
+    "cmake/AwsSharedLibSetup.cmake"
     "cmake/AwsTestHarness.cmake"
     "cmake/AwsLibFuzzer.cmake"
     "cmake/AwsSanitizers.cmake"
