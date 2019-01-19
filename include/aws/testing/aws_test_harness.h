@@ -445,8 +445,9 @@ done:
     return EXCEPTION_EXECUTE_HANDLER;
 }
 #else
-#    include <execinfo.h>
 #    include <signal.h>
+#if __GLIBC__
+#	 include <execinfo.h>
 
 static void s_print_stack_trace(int sig, siginfo_t *sig_info, void *user_data) {
     (void)sig_info;
@@ -467,6 +468,14 @@ static void s_print_stack_trace(int sig, siginfo_t *sig_info, void *user_data) {
     free(strings);
     exit(-1);
 }
+#else
+static void s_print_stack_trace(int sig, siginfo_t *sig_info, void *user_data) {
+	(void)sig_info;
+	(void)user_data;
+    fprintf(stderr, "** Signal Thrown %d**\n", sig);
+	exit(-1);
+}
+#endif
 #endif
 
 static inline int s_aws_run_test_case(struct aws_test_harness *harness) {
