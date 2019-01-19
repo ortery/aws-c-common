@@ -11,7 +11,7 @@
 # express or implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.3)
 project(aws-c-common LANGUAGES C VERSION 0.1.0)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -176,21 +176,33 @@ foreach(HEADER_SRCPATH IN ITEMS ${AWS_COMMON_HEADERS} ${AWS_COMMON_OS_HEADERS} $
             DESTINATION ${HEADER_DSTDIR}
             COMPONENT Development)
 endforeach()
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 aws_prepare_shared_lib_exports(${CMAKE_PROJECT_NAME})
 
-configure_file("cmake/${CMAKE_PROJECT_NAME}-config.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake"
-  @ONLY)
+set(PROJECT_CONFIG_FILE_TEMPLATE "cmake/${CMAKE_PROJECT_NAME}-config.cmake")
+set(GENERATED_PROJECT_CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake")
+set(CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}")
+
+set(MODULE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake")
+# Use:
+# * CMAKE_PROJECT_NAME
+# * AWS_MODULE_PATH
+configure_package_config_file(
+  "${PROJECT_CONFIG_FILE_TEMPLATE}"
+  "${GENERATED_PROJECT_CONFIG_FILE}"
+  INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}"
+  PATH_VARS MODULE_INSTALL_DIR)
 
 install(EXPORT "${CMAKE_PROJECT_NAME}-targets"
-    DESTINATION "${LIBRARY_DIRECTORY}/${CMAKE_PROJECT_NAME}/cmake"
-    NAMESPACE AWS::
-    COMPONENT Development)
+  DESTINATION "${CONFIG_INSTALL_DIR}"
+  NAMESPACE AWS::
+  COMPONENT Development)
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}-config.cmake"
-    DESTINATION "${LIBRARY_DIRECTORY}/${CMAKE_PROJECT_NAME}/cmake"
-    COMPONENT Development)
+install(FILES "${GENERATED_PROJECT_CONFIG_FILE}"
+  DESTINATION "${CONFIG_INSTALL_DIR}"
+  COMPONENT Development)
 
 list(APPEND EXPORT_MODULES
     "cmake/AwsCFlags.cmake"
@@ -200,9 +212,8 @@ list(APPEND EXPORT_MODULES
     "cmake/AwsSanitizers.cmake"
     "cmake/AwsSIMD.cmake"
     )
-
 install(FILES ${EXPORT_MODULES}
-        DESTINATION "${LIBRARY_DIRECTORY}/cmake"
+        DESTINATION "${MODULE_INSTALL_DIR}"
         COMPONENT Development)
 
 if (NOT CMAKE_CROSSCOMPILING)

@@ -1,2 +1,8 @@
+cmake_minimum_required(VERSION 3.3)
+@PACKAGE_INIT@
 include(${CMAKE_CURRENT_LIST_DIR}/@CMAKE_PROJECT_NAME@-targets.cmake)
+check_required_components("@CMAKE_PROJECT_NAME@")
+if(NOT "@PACKAGE_MODULE_INSTALL_DIR@" IN_LIST CMAKE_MODULE_PATH)
+  list(APPEND CMAKE_MODULE_PATH "@PACKAGE_MODULE_INSTALL_DIR@")
+endif()
 
